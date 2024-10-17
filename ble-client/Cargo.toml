@@ -1,0 +1,9 @@
+[package]
+name = "new-ble-client"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+esp-idf-sys = "0.1.1"
+esp-idf-hal = "0.1.1"
+esp_idf = "0.1.1"
