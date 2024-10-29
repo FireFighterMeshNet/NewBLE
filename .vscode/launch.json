@@ -1,0 +1,45 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'ffmn_nostd_ble'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=ffmn_nostd_ble",
+                    "--package=ffmn_nostd_ble"
+                ],
+                "filter": {
+                    "name": "ffmn_nostd_ble",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'ffmn_nostd_ble'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=ffmn_nostd_ble",
+                    "--package=ffmn_nostd_ble"
+                ],
+                "filter": {
+                    "name": "ffmn_nostd_ble",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

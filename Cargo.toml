@@ -1,0 +1,77 @@
+[package]
+name = "ffmn_nostd_ble"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+either = { version = "1.13.0", default-features = false }
+embassy-executor = { version = "0.6.0", features = ["nightly", "executor-thread", "executor-interrupt"] }
+embassy-net = { version = "0.4.0", features = [
+    "tcp",
+    "udp",
+    "dhcpv4", "medium-ethernet", "proto-ipv4"
+] }
+embassy-sync = "0.6.0"
+embassy-time = { version = "0.3.2", features = ["generic-queue"] }
+embedded-io-async = "0.6.1"
+esp-alloc = "0.5.0"
+esp-backtrace = { version = "0.14.0", features = [
+    "esp32",
+    "exception-handler",
+    "panic-handler",
+    "println",
+] }
+esp-hal = { version = "0.21.0", features = ["esp32", "log"] }
+esp-hal-embassy = { version = "0.4.0", features = ["esp32", "log"] }
+esp-println = { version = "0.12.0", features = ["esp32", "log"] }
+esp-wifi = { version = "0.10.1", features = ["esp32",
+    "embassy-net", "async",
+    # "utils",
+    # "ipv4", "tcp", "udp",
+    # "dhcpv4",
+    # "wifi", 
+    "ble",
+    # "sniffer",
+    "log",
+    # TODO: "ble" or "coex" for bluetooth or both bluetooth and wifi respectively
+] }
+futures-concurrency = { version = "7.6.1", default-features = false }
+heapless = "0.8.0"
+ieee80211 = "0.5.0"
+log = { version = "0.4.21" }
+rand = { version = "0.8.5", default-features = false, features = ["small_rng"] }
+scroll = { version = "0.12.0", default-features = false, features = ["derive"]}
+static_cell = "2.1.0"
+
+[patch.crates-io]
+# change back to regular release after <https://github.com/embassy-rs/embassy/pull/3198> is included
+embassy-net = { git = "https://github.com/embassy-rs/embassy" }
+embassy-net-driver = { git = "https://github.com/embassy-rs/embassy" }
+embassy-time = { git = "https://github.com/embassy-rs/embassy" }
+embassy-time-driver = { git = "https://github.com/embassy-rs/embassy" }
+# change back to regular release after <https://github.com/Frostie314159/ieee80211-rs/pull/16> is included
+ieee80211 = { git = "https://github.com/Frostie314159/ieee80211-rs" }
+# Remove after https://github.com/yoshuawuyts/futures-concurrency/pull/196
+futures-concurrency = { git = "https://github.com/Easyoakland/futures-concurrency", branch = "fix-nostd" }
+
+[profile.dev]
+opt-level = "s"
+# esp_wifi is broken with overflow-checks
+overflow-checks = false
+
+[profile.release]
+codegen-units = 1        # LLVM can perform better optimizations using a single thread
+debug = 2
+debug-assertions = false
+incremental = false
+lto = 'fat'
+opt-level = "z"
+overflow-checks = false
+
+[build-dependencies]
+const-gen = "1.6.5"
+
+[features]
+# Dump raw ieee80211 packets with sniffer. Decreases wifi performance.
+dump-packets = []

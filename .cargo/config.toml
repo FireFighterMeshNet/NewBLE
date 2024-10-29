@@ -1,0 +1,18 @@
+[target.xtensa-esp32-none-elf]
+runner = "espflash flash --monitor"
+
+[env]
+ESP_LOG = "INFO"
+ESP_WIFI_MAX_BURST_SIZE = "8"
+
+[build]
+rustflags = [
+    "-C", "link-arg=-nostartfiles",
+    # See <https://docs.rs/esp-wifi/latest/esp_wifi/>
+    "-C", "link-arg=-Tlinkall.x",
+    "-C", "link-arg=-Trom_functions.x",
+]
+target = "xtensa-esp32-none-elf"
+
+[unstable]
+build-std = ["core", "alloc"]
