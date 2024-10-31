@@ -1,6 +1,6 @@
 use core::future::{Future, IntoFuture};
 use either::Either;
-use futures_concurrency::future::FutureExt;
+use futures_lite::future::FutureExt;
 
 // See <https://github.com/embassy-rs/static-cell/issues/16>
 /// Convert a `T` to a `&'static mut T`.
@@ -77,15 +77,13 @@ impl<T, E> UnwrapTodo for Result<T, E> {
 /// Extension trait to race heterogeneous futures.
 pub trait SelectEither {
     /// Select Either the result of the first future (Left) or the result of the second future (Right) by [`race`][race]ing.
-    ///
-    /// [race]: futures_concurrency::future::futures_ext::race
     #[allow(async_fn_in_trait)]
     async fn select<T1, T2>(self, fut2: impl IntoFuture<Output = T2>) -> Either<T1, T2>
     where
         Self: Future<Output = T1> + Sized,
     {
         async { Either::Left(self.await) }
-            .race(async { Either::Right(fut2.await) })
+            .or(async { Either::Right(fut2.await) })
             .await
     }
 }
