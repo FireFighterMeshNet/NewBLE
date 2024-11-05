@@ -71,7 +71,7 @@ const AT_CMD: u8 = 0x04;
 
 #[embassy_executor::task]
 async fn writer(
-    mut tx: UartTx<'static, UART1, Async>,
+    mut tx: UartTx<'static, UART0, Async>,
     signal: &'static Signal<NoopRawMutex, usize>,
 ) {
     use core::fmt::Write;
@@ -85,7 +85,7 @@ async fn writer(
     loop {
         let bytes_read = signal.wait().await;
         signal.reset();
-        write!(&mut tx, "\r\n-- received {} bytes --\r\n", bytes_read).unwrap();
+        write!(&mut tx, "\r\nTX: -- received {} bytes --\r\n", bytes_read).unwrap();
         embedded_io_async::Write::flush(&mut tx).await.unwrap();
     }
 
@@ -93,7 +93,7 @@ async fn writer(
 
 #[embassy_executor::task]
 async fn reader(
-    mut rx: UartRx<'static, UART1, Async>,
+    mut rx: UartRx<'static, UART0, Async>,
     signal: &'static Signal<NoopRawMutex, usize>,
 ) {
     const MAX_BUFFER_SIZE: usize = 10 * READ_BUF_SIZE + 16;
@@ -105,7 +105,7 @@ async fn reader(
         match r {
             Ok(len) => {
                 offset += len;
-                esp_println::println!("Read: {len}, data: {:?}", &rbuf[..offset]);
+                esp_println::println!("RX println: Read: {len}, data: {:?}", &rbuf[..offset]);
                 offset = 0;
                 signal.signal(len);
             }
@@ -142,11 +142,11 @@ async fn main(spawn: embassy_executor::Spawner) {
     spawn.must_spawn(boot_button_reply(io.pins.gpio0));
 
     // //default tx,rx = 1,3
-    let tx_pin = io.pins.gpio17;
-    let rx_pin = io.pins.gpio16;  
+    let tx_pin = io.pins.gpio25;
+    let rx_pin = io.pins.gpio32;  
 
     let config = Config::default().rx_fifo_full_threshold(READ_BUF_SIZE as u16);
-    let mut uart = Uart::new_async_with_config(peripherals.UART1, config, rx_pin, tx_pin).unwrap();
+    let mut uart = Uart::new_async_with_config(peripherals.UART0, config, rx_pin, tx_pin).unwrap();
     // let mut uart = Uart::new_async(peripherals.UART0, rx_pin, tx_pin).unwrap();
     uart.set_at_cmd(AtCmdConfig::new(None, None, None, AT_CMD, None));
     
@@ -157,7 +157,12 @@ async fn main(spawn: embassy_executor::Spawner) {
     
     let (rx, tx) = uart.split();
     spawn.must_spawn(writer(tx, &signal));
-    spawn.must_spawn(reader(rx, &signal));
+    spawn.must_spawn(reader(rx, &signal)); 
+
+
+    //TODO
+    //code up uart tx and rx on every pin to run at the same time on loop
+    //then while all pins are txing or rxing, measure each to see whcih transmits signal
 
 
 
