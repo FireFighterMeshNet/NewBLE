@@ -5,6 +5,7 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
+bleps = { git = "https://github.com/bjoernQ/bleps", package = "bleps", rev = "a5148d8ae679e021b78f53fd33afb8bb35d0b62e", features = [ "macros", "async"] }
 either = { version = "1.13.0", default-features = false }
 embassy-executor = { version = "0.6.0", features = ["nightly", "executor-thread", "executor-interrupt"] }
 embassy-sync = "0.6.0"
@@ -20,10 +21,10 @@ esp-backtrace = { version = "0.14.0", features = [
 esp-hal = { version = "0.21.0", features = ["esp32", "log"] }
 esp-hal-embassy = { version = "0.4.0", features = ["esp32", "log"] }
 esp-println = { version = "0.12.0", features = ["esp32", "log"] }
-esp-wifi = { version = "0.10.1", features = ["esp32",
+esp-wifi = { optional = true, version = "0.10.1", features = ["esp32",
     "embassy-net", "async",
     "ble",
-    "log",
+    "log"
 ] }
 futures-lite = { version = "2.4.0", default-features = false, features = ["race"] }
 heapless = "0.8.0"
@@ -31,6 +32,9 @@ log = { version = "0.4.21" }
 rand = { version = "0.8.5", default-features = false, features = ["small_rng"] }
 scroll = { version = "0.12.0", default-features = false, features = ["derive"]}
 static_cell = "2.1.0"
+
+[features]
+esp-wifi = ["dep:esp-wifi"]
 
 [patch.crates-io]
 # change back to regular release after <https://github.com/embassy-rs/embassy/pull/3198> is included
