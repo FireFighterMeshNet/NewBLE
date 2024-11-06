@@ -6,29 +6,27 @@
 // #![expect(dead_code)] // Silence errors while prototyping.
 // extern crate alloc;
 
-use core::{u8, cell::RefCell};
 use bleps::{
     ad_structure::{
-        create_advertising_data,
-        AdStructure,
-        BR_EDR_NOT_SUPPORTED,
-        LE_GENERAL_DISCOVERABLE,
+        create_advertising_data, AdStructure, BR_EDR_NOT_SUPPORTED, LE_GENERAL_DISCOVERABLE,
     },
     async_attribute_server::AttributeServer,
     asynch::Ble,
     attribute_server::NotificationData,
     gatt,
 };
+use core::{cell::RefCell, u8};
 use embassy_sync::{blocking_mutex::raw::NoopRawMutex, signal::Signal};
 use embassy_time::{Duration, WithTimeout};
 use embedded_io_async::Write;
+use esp_alloc as _;
 use esp_backtrace as _;
 use esp_hal::{
-    prelude::*,
-    time, 
     gpio::{GpioPin, Input, Io, Pull},
     peripherals::{UART0, UART1, UART2},
+    prelude::*,
     rng::Rng,
+    time,
     timer::timg::TimerGroup,
     uart::{
         config::{AtCmdConfig, Config},
@@ -36,12 +34,12 @@ use esp_hal::{
     },
     Async,
 };
-use esp_wifi::{ble::controller::BleConnector, init, EspWifiController};
+use esp_println::println;
+use esp_wifi::{
+    ble::controller::asynch::BleConnector, init, EspWifiInitFor, EspWifiInitialization,
+};
 use rand::{rngs::SmallRng, Rng as _, SeedableRng as _};
 use static_cell::StaticCell;
-use esp_println::println;
-use esp_alloc as _;
-use esp_backtrace as _;
 
 type Mutex<T> = esp_hal::xtensa_lx::mutex::SpinLockMutex<T>;
 
@@ -116,15 +114,6 @@ async fn reader(
     }
 }
 
-macro_rules! mk_static {
-    ($t:ty,$val:expr) => {{
-        static STATIC_CELL: static_cell::StaticCell<$t> = static_cell::StaticCell::new();
-        #[deny(unused_attributes)]
-        let x = STATIC_CELL.uninit().write(($val));
-        x
-    }};
-}
-
 #[esp_hal_embassy::main]
 async fn main(spawn: embassy_executor::Spawner) {
     // Provides #[global_allocator] with given number of bytes.
@@ -133,36 +122,29 @@ async fn main(spawn: embassy_executor::Spawner) {
     esp_alloc::heap_allocator!(72_000);
 
     // Setup and configuration.
-    // let peripherals = esp_hal::init(esp_hal::Config::default());
-    // let timer = TimerGroup::new(peripherals.TIMG0);
-    // let io = Io::new(peripherals.GPIO, peripherals.IO_MUX);
-    // esp_println::logger::init_logger_from_env();
-    // esp_hal_embassy::init(timer.timer0);
-
-    esp_println::logger::init_logger_from_env();
-    let peripherals = esp_hal::init({
-        let mut config = esp_hal::Config::default();
-        config.cpu_clock = CpuClock::max();
-        config
-    });
-
+    let peripherals = esp_hal::init(esp_hal::Config::default());
     let timg0 = TimerGroup::new(peripherals.TIMG0);
+    let io = Io::new(peripherals.GPIO, peripherals.IO_MUX);
+    esp_println::logger::init_logger_from_env();
+    esp_hal_embassy::init(timg0.timer0);
+    let mut rng = Rng::new(peripherals.RNG);
+    let mut prng = {
+        let mut buf = [0u8; 16];
+        rng.read(&mut buf);
+        SmallRng::from_seed(buf)
+    };
+    let button = Input::new(io.pins.gpio0, Pull::Down);
 
-    let init = &*mk_static!(
-        EspWifiController<'static>,
+    let init = &*make_static!(
+        EspWifiInitialization,
         init(
-            timg0.timer0,
-            Rng::new(peripherals.RNG),
+            EspWifiInitFor::Ble,
+            timg0.timer1,
+            rng,
             peripherals.RADIO_CLK,
         )
         .unwrap()
     );
-
-    let io = Io::new(peripherals.GPIO, peripherals.IO_MUX);
-    let button = Input::new(io.pins.gpio0, Pull::Down);
-    let timg1 = TimerGroup::new(peripherals.TIMG1);
-    esp_hal_embassy::init(timg1.timer0);
-
     let mut bluetooth = peripherals.BT;
     let connector = BleConnector::new(&init, &mut bluetooth);
 
@@ -172,13 +154,6 @@ async fn main(spawn: embassy_executor::Spawner) {
 
     let pin_ref = RefCell::new(button);
     let pin_ref = &pin_ref;
-
-    let mut rng = Rng::new(peripherals.RNG);
-    let mut prng = {
-        let mut buf = [0u8; 16];
-        rng.read(&mut buf);
-        SmallRng::from_seed(buf)
-    };
 
     spawn.must_spawn(boot_button_reply(io.pins.gpio0));
 
@@ -197,7 +172,6 @@ async fn main(spawn: embassy_executor::Spawner) {
     let (rx, tx) = uart.split();
     spawn.must_spawn(writer(tx, &signal));
     spawn.must_spawn(reader(rx, &signal));
-   
 
     loop {
         println!("{:?}", ble.init().await);
