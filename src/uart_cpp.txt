@@ -1,0 +1,68 @@
+#include <Arduino.h>
+
+// Define UART pins
+#define RXD_PIN 3  // RX pin
+#define TXD_PIN 1  // TX pin
+
+// Initialize HardwareSerial
+HardwareSerial mySerial(0); // UART1
+
+// Global variable to store the last received bit
+volatile int lastReceivedBit = -1;
+
+// Writer Task: Writes a random bit (0 or 1) every second
+void writerTask(void* parameter) {
+  while (true) {
+    // Generate a random bit (0 or 1)
+    int randomBit = random(0, 2);
+
+    // Send the random bit via UART
+    mySerial.printf("%d", randomBit);
+    mySerial.flush();
+
+    // Print the sent bit to Serial Monitor (for debugging)
+    Serial.printf("CPP Sent bit: %d\n", randomBit);
+
+    // Wait for 1 second
+    delay(1000);
+  }
+}
+
+// Reader Task: Reads the bit sent by the writer
+void readerTask(void* parameter) {
+  while (true) {
+    if (mySerial.available()) {
+      // Read the incoming bit
+      char receivedChar = mySerial.read();
+      lastReceivedBit = receivedChar - '0'; // Convert char ('0' or '1') to int (0 or 1)
+
+      // Print the received bit to Serial Monitor (for debugging)
+      Serial.printf("CPP Received bit: %d\n", lastReceivedBit);
+    }
+
+    delay(10); // Small delay to avoid busy-waiting
+  }
+}
+
+void setup() {
+  // Initialize Serial for debugging
+  Serial.begin(115200);
+  while (!Serial) {
+    // Wait for the Serial Monitor to connect
+  }
+  Serial.println("Initializing...");
+
+  // Initialize UART
+  mySerial.begin(115200, SERIAL_8N1, RXD_PIN, TXD_PIN);
+
+  // Seed the random number generator
+  randomSeed(analogRead(0));
+
+  // Create tasks for writer and reader
+  xTaskCreate(writerTask, "Writer Task", 4096, NULL, 1, NULL);
+  xTaskCreate(readerTask, "Reader Task", 4096, NULL, 1, NULL);
+}
+
+void loop() {
+  // Do nothing in the main loop; tasks handle everything
+}
