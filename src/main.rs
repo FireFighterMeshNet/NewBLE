@@ -81,20 +81,19 @@ async fn writer(
 
     let mut byte: u8 = 0;
     loop {
-        // Generate a random bit (0 or 1)
 
-        // Send the bit over UART
+        // Send the byte over UART
         embedded_io_async::Write::write(&mut tx, &[byte, RUST_ID]).await.unwrap();
         embedded_io_async::Write::flush(&mut tx).await.unwrap();
         
-        // Print debug log for the bit being sent
+        // Print debug log for the byte being sent and increment it
         esp_println::println!("RUST-{} Sent: {}", RUST_ID, byte);
         byte += 1;
 
-        // Wait for 1 second before sending the next bit
+        // Wait for 1 second before sending the next byte
         embassy_time::Timer::after(Duration::from_secs(1)).await;
 
-        // Optionally, signal the writer has sent a bit (though it's not required here)
+        // Optionally, signal the writer has sent a byte (though it's not required here)
         signal.signal(1);
     }
 }
@@ -115,8 +114,11 @@ async fn reader(
         match r {
             Ok(len) => {
                 offset += len;
-                esp_println::println!("RUST-{} Received: {}", RUST_ID, rbuf[0]);
-                esp_println::println!("RUST-{} Received: {}", RUST_ID, rbuf[1]);
+                for i in 0..offset {
+                    esp_println::println!("RUST-{} Received: {}", RUST_ID, rbuf[i]);
+                }
+                // esp_println::println!("RUST-{} Received: {}", RUST_ID, rbuf[0]);
+                // esp_println::println!("RUST-{} Received: {}", RUST_ID, rbuf[1]);
                 offset = 0;
 
                 // Optionally, signal the reader has received data (though it's not required here)
